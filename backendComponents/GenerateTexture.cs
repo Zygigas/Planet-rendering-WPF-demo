@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,52 +18,81 @@ namespace stars_without_numbers___simulacrum.backendComponents
         readonly static FastNoiseLite noise = new();
 
 
-        const int height = 100;
-        const int width = 100;
+        const int height = 2000;
+        const int width = 2000;
 
-        readonly WriteableBitmap wb = new(height, width, 96, 96, PixelFormats.Bgra32, null);
+        public WriteableBitmap wb = new(height, width, 96, 96, PixelFormats.Bgra32, null);
 
-        public void TextureGenTest()
+        private FastNoiseLite GenerateNoise(int seed) 
         {
-            //this probably could be made into a config class/file/struct
+            //this probably could be made into alpha config class/file/struct
+            FastNoiseLite noise = new();
+            noise.SetSeed(seed);
             noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-            noise.SetFrequency(0.02f);
+            noise.SetFrequency(0.002f);
             noise.SetFractalType(FastNoiseLite.FractalType.FBm);
             noise.SetFractalOctaves(5);
             noise.SetFractalLacunarity(2.0f);
             noise.SetFractalGain(0.5f);
+            return noise;
+        }
 
-            //probably a better way to do it, but need to test for speed before optimizing needlesly.
+        public void TextureGenTest(int tick)
+        {
+            
+            
+
+            //probably alpha better way to do it, but need to test for speed before optimizing needlesly.
             int stride = wb.BackBufferStride;
             byte[] pixels = new byte[height * stride];
+
+            FastNoiseLite noise1 = GenerateNoise(1);
+            FastNoiseLite noise2 = GenerateNoise(2 );
+            FastNoiseLite noise3 = GenerateNoise(3 );
+            
+
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    // Generate noise value from -1 to 1
-                    float val = noise.GetNoise(x, y);
-                    val = (val + 1) / 2.0f; // Normalize to 0 - 1
+                    int sampleX = (int)(x);
+                    int sampleY = (int)(y);
+                    
+                    
+                    float redVal = noise1.GetNoise(sampleX, sampleY, tick) % noise2.GetNoise(sampleX, sampleY, tick);
+                    float greenVal = noise3.GetNoise(sampleX, sampleY, tick) % noise2.GetNoise(sampleX, sampleY, tick);
+                    float blueVal = noise1.GetNoise(sampleX, sampleY, tick) % noise3.GetNoise(sampleX, sampleY, tick);
 
-                    // Optional: Apply a circular falloff for spherical shading
+                    redVal = (redVal + 1) / 2.0f; // Normalize to 0 - 1
+                    greenVal = (greenVal + 1) / 2.0f; // Normalize to 0 - 1
+                    blueVal = (blueVal + 1) / 2.0f; // Normalize to 0 - 1
+
+                    // Optional: Apply alpha circular falloff for spherical shading
                     double dx = x - width / 2.0;
                     double dy = y - height / 2.0;
                     double dist = Math.Sqrt(dx * dx + dy * dy) / (width / 2.0);
                     dist = Math.Clamp(dist, 0, 1);
+                    double fade = Math.Clamp((dist - 0.96) / (1 - 0.96), 0, 1);
                     float falloff = (float)(1 - dist * dist); // smoother than linear
 
-                    float brightness = val * falloff;
+                    float redBrightness = redVal * falloff;
+                    float greenBrightness = greenVal * falloff;
+                    float blueBrightness = blueVal * falloff;
 
-                    byte r = (byte)(brightness * 200);
-                    byte g = (byte)(brightness * 180);
-                    byte b = (byte)(brightness * 160);
-                    byte a = (dist < 1.0 ? (byte)255 : (byte)0); // circle mask alpha
+                    byte red = (byte)(redBrightness * 255);
+                    byte green = (byte)(greenBrightness * 255);
+                    byte blue = (byte)(blueBrightness * 255);
+                    byte alpha = (byte)((1f - fade) * 255);
+
+                        
+                    
 
                     int index = y * stride + x * 4;
-                    pixels[index + 0] = b;
-                    pixels[index + 1] = g;
-                    pixels[index + 2] = r;
-                    pixels[index + 3] = a;
+                    pixels[index + 0] = blue;
+                    pixels[index + 1] = green;
+                    pixels[index + 2] = red;
+                    pixels[index + 3] = alpha;
                 }
             }
             wb.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);

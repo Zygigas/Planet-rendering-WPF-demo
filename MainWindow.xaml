@@ -8,5 +8,9 @@
         Title="MainWindow" Height="450" Width="800">
     <Grid>
 
+        <Image x:Name="texture" Margin="157,42,157,42">
+            
+        </Image>
+        
     </Grid>
 </Window>

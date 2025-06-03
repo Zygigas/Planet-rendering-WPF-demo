@@ -17,13 +17,32 @@ namespace Start_Withouth_numbers_simulation_project
     /// </summary>
     public partial class MainWindow : Window
     {
+        int tick = 0;
+        GenerateTexture planetTest = new();
         public MainWindow()
         {
             InitializeComponent();
 
-            GenerateTexture planetTest = new();
+            texture.Source = planetTest.wb;
 
-            planetTest.CreateThumbnail("test");
+            this.MouseDown += MouseDownEvent;
+
+            planetTest.TextureGenTest(tick);
+            planetTest.CreateThumbnail("test.png");
+
         }
+
+        private void MouseDownEvent(object sender, MouseButtonEventArgs e)
+        {
+            tickUp();
+        }
+
+        void tickUp()
+        {
+            tick++;
+            planetTest.TextureGenTest(tick);
+            planetTest.CreateThumbnail("test.png");
+        }
+
     }
 }

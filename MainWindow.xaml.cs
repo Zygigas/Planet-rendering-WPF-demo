@@ -25,8 +25,8 @@ namespace Start_Withouth_numbers_simulation_project
     {
 
         int seed = (int)DateTime.Now.Ticks;
-        int x = 0;
-        int y = 0;
+        float scroll = 0f;
+        float scrollFactor = 0.001f;
 
         //GenerateTexture planetTest = new();
 
@@ -34,6 +34,9 @@ namespace Start_Withouth_numbers_simulation_project
 
         public MainWindow()
         {
+            MouseDown += MouseDownEventHandler;
+
+
             Timer timer = new Timer();
 
             timer.Interval = 16;
@@ -58,14 +61,23 @@ namespace Start_Withouth_numbers_simulation_project
             planetTest = new(noiseTexture);
 
             texture.Source = planetTest.outPutTexture;
-            planetTest.Regenerate(x,y);
+            planetTest.Regenerate(scroll);
 
+        }
+
+        private void MouseDownEventHandler(object sender, MouseButtonEventArgs e)
+        {
+            scrollFactor += scrollFactor;
         }
 
         private void TimerTick(object sender, ElapsedEventArgs e)
         {
-                x++;
-            this.Dispatcher.Invoke(() => planetTest.Regenerate(x, y));
+            scroll += scrollFactor;
+            if (scroll > 1f)
+            {
+                scroll = scroll % 1f;
+            }
+            this.Dispatcher.Invoke(() => planetTest.Regenerate(scroll));
         }
 
     }

@@ -43,7 +43,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
 
         }
 
-        public void Regenerate(int xOffset, int yOffset)
+        public void Regenerate(float scrollFactor)
         {
             int height = outPutTexture.PixelHeight;
             int width = outPutTexture.PixelWidth;
@@ -56,21 +56,43 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
             {
                 for (int x = 0; x < width; x++)
                 {
-                    float deltaY = y - height / 2;
-                    float deltaX = x - width / 2;
+                    float normX = (x - width / 2f) / (width / 2f);
+                    float normY = (y - height / 2f) / (height / 2f);
 
-                    int sampleX = (x + xOffset) % mainTexture.PixelWidth;
-                    int sampleY = (y + yOffset) % mainTexture.PixelHeight;
+                    float rSquared = normX * normX + normY * normY;
 
-                    float value = MainPixels[sampleY * mainStride + sampleX] / 255f;
+                    if (rSquared <= 1f) // Only process inside the sphere
+                    {
+                        // Map the 2D screen point to a 3D point on the hemisphere
+                        float dz = MathF.Sqrt(1f - rSquared); // z up
+                        float dx = normX;
+                        float dy = normY;
 
-                    //Apply alpha circular falloff for spherical shading
-                    float distanceFromOrigin = MathF.Sqrt(MathF.Pow(deltaX, 2) + MathF.Pow(deltaY, 2));
-                    float maxDiameter = MathF.Max(width, height) / 2;
+                        // Now go from 3D vector (dx, dy, dz) → spherical UV
+                        float u = 0.5f + MathF.Atan2(dz, -dx) / (2f * MathF.PI);
+                        float v = 0.5f + MathF.Asin(dy) / MathF.PI;
 
-                    float smoothing = Math.Clamp((distanceFromOrigin / maxDiameter - 1f) / (0.98f - 1f), 0f, 1f);
+                        u = scrollFactor - 0.25f + (u - 0.5f); // shift so that sphere center is at viewportCenterU
 
-                    outPutPixels[y * outPutStride + x] = (byte)(value * 255 * smoothing);
+                        // Wrap around to keep it inside 0–1
+                        u = (u % 1f + 1f) % 1f;
+
+                        // Convert UV to pixel coordinates
+                        int sampleX = (int)(u * mainTexture.PixelWidth) % mainTexture.PixelWidth;
+                        int sampleY = (int)(v * mainTexture.PixelHeight) % mainTexture.PixelHeight;
+
+                        float value = MainPixels[sampleY * mainStride + sampleX] / 255f;
+
+                        // Optional: circular falloff (smoothing)
+                        float smoothing = Math.Clamp((MathF.Sqrt(rSquared) - 1f) / (0.98f - 1f), 0f, 1f);
+
+                        outPutPixels[y * outPutStride + x] = (byte)(value * 255f * smoothing);
+                    }
+                    else
+                    {
+                        // Outside the sphere: set to black or transparent
+                        outPutPixels[y * outPutStride + x] = 0;
+                    }
                 }
             }
             outPutTexture.WritePixels(new Int32Rect(0, 0, width, height), outPutPixels, outPutStride, 0);

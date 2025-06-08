@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -17,76 +19,74 @@ namespace stars_without_numbers___simulacrum.backendComponents
         //for now, rawdogging the dependecy, should be replaced with dependecy inversion later on.
         readonly static FastNoiseLite noise = new();
 
-
-        const int height = 2000;
-        const int width = 2000;
+        const int height = 500;
+        const int width = 500;
 
         public WriteableBitmap wb = new(height, width, 96, 96, PixelFormats.Bgra32, null);
 
-        private FastNoiseLite GenerateNoise(int seed) 
+        struct NoiseOptions()
         {
-            //this probably could be made into alpha config class/file/struct
+            public int seed = 0;
+            public FastNoiseLite.NoiseType noiseType = FastNoiseLite.NoiseType.OpenSimplex2;
+            public float frequency = 0.01f;
+            public FastNoiseLite.FractalType fractalType = FastNoiseLite.FractalType.FBm;
+            public int fractalOctaves = 5;
+            public float fractalLacunarity = 2f;
+            public float fractalGain = -0.5f;
+            public float FractalWeightedStrength = -0.1f;
+        }
+
+        private FastNoiseLite GenerateNoise(NoiseOptions options)
+        {
             FastNoiseLite noise = new();
-            noise.SetSeed(seed);
-            noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-            noise.SetFrequency(0.002f);
-            noise.SetFractalType(FastNoiseLite.FractalType.FBm);
-            noise.SetFractalOctaves(5);
-            noise.SetFractalLacunarity(2.0f);
-            noise.SetFractalGain(0.5f);
+            noise.SetSeed(options.seed);
+            noise.SetNoiseType(options.noiseType);
+            noise.SetFrequency(options.frequency);
+            noise.SetFractalType(options.fractalType);
+            noise.SetFractalOctaves(options.fractalOctaves);
+            noise.SetFractalLacunarity(options.fractalLacunarity);
+            noise.SetFractalGain(options.fractalGain);
+            noise.SetFractalWeightedStrength(options.FractalWeightedStrength);
             return noise;
         }
 
-        public void TextureGenTest(int tick)
+        public void TextureGenTest(int seed,int xOffset,int yOffset)
         {
-            
-            
-
             //probably alpha better way to do it, but need to test for speed before optimizing needlesly.
             int stride = wb.BackBufferStride;
             byte[] pixels = new byte[height * stride];
 
-            FastNoiseLite noise1 = GenerateNoise(1);
-            FastNoiseLite noise2 = GenerateNoise(2 );
-            FastNoiseLite noise3 = GenerateNoise(3 );
-            
+            NoiseOptions noiseOptions = new NoiseOptions();
+            noiseOptions.seed = seed;
 
+            FastNoiseLite noise1 = GenerateNoise(noiseOptions);
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
-                {
-                    int sampleX = (int)(x);
-                    int sampleY = (int)(y);
-                    
-                    
-                    float redVal = noise1.GetNoise(sampleX, sampleY, tick) % noise2.GetNoise(sampleX, sampleY, tick);
-                    float greenVal = noise3.GetNoise(sampleX, sampleY, tick) % noise2.GetNoise(sampleX, sampleY, tick);
-                    float blueVal = noise1.GetNoise(sampleX, sampleY, tick) % noise3.GetNoise(sampleX, sampleY, tick);
+                { 
+                    //cords normalized to the circle origin.
+                    float deltaY = y - height / 2;
+                    float deltaX = x - width / 2;
 
-                    redVal = (redVal + 1) / 2.0f; // Normalize to 0 - 1
-                    greenVal = (greenVal + 1) / 2.0f; // Normalize to 0 - 1
-                    blueVal = (blueVal + 1) / 2.0f; // Normalize to 0 - 1
+                    //Apply alpha circular falloff for spherical shading
+                    float distanceFromOrigin = MathF.Sqrt(MathF.Pow(deltaX, 2) + MathF.Pow(deltaY, 2));
+                    float maxDiameter = MathF.Max(width, height)/ 2;
 
-                    // Optional: Apply alpha circular falloff for spherical shading
-                    double dx = x - width / 2.0;
-                    double dy = y - height / 2.0;
-                    double dist = Math.Sqrt(dx * dx + dy * dy) / (width / 2.0);
-                    dist = Math.Clamp(dist, 0, 1);
-                    double fade = Math.Clamp((dist - 0.96) / (1 - 0.96), 0, 1);
-                    float falloff = (float)(1 - dist * dist); // smoother than linear
+                    float value = noise1.GetNoise((deltaX + xOffset), (deltaY + yOffset));
 
-                    float redBrightness = redVal * falloff;
-                    float greenBrightness = greenVal * falloff;
-                    float blueBrightness = blueVal * falloff;
 
-                    byte red = (byte)(redBrightness * 255);
-                    byte green = (byte)(greenBrightness * 255);
-                    byte blue = (byte)(blueBrightness * 255);
-                    byte alpha = (byte)((1f - fade) * 255);
+                    // output is from -1 to 1, we want to normalize it to 0 to 1
+                    value = (value + 1f) / 2f;
 
-                        
-                    
+                    //smoothing blurr
+                    float smoothing = Math.Clamp((distanceFromOrigin / maxDiameter - 1f) / (0.98f - 1f), 0f, 1f);
+                    //TODO: figure out some better antialiasing method maybe...
+
+                    byte red = (byte)(value * 155);
+                    byte green = (byte)(value * 255);
+                    byte blue = (byte)(value * 200);
+                    byte alpha = distanceFromOrigin <= maxDiameter ? (byte)(255*smoothing) : (byte)0;
 
                     int index = y * stride + x * 4;
                     pixels[index + 0] = blue;
@@ -96,9 +96,8 @@ namespace stars_without_numbers___simulacrum.backendComponents
                 }
             }
             wb.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
-
-
         }
+
         public void CreateThumbnail(string filename)
         {
             if (filename != string.Empty)
@@ -109,6 +108,5 @@ namespace stars_without_numbers___simulacrum.backendComponents
                 encoder5.Save(stream5);
             }
         }
-
     }
 }

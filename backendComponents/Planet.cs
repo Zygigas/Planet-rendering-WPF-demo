@@ -31,7 +31,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
                 throw new Exception("mainTexture should have twice the width of height. This is to make representing the other side of the planet easier.");
             }
             this.mainTexture = mainTexture;
-            this.outPutTexture = new WriteableBitmap((int)this.mainTexture.PixelWidth/2,(int)this.mainTexture.PixelHeight, this.mainTexture.DpiX, this.mainTexture.DpiY,PixelFormats.Gray8,null);
+            this.outPutTexture = new WriteableBitmap((int)this.mainTexture.PixelWidth/2,(int)this.mainTexture.PixelHeight, this.mainTexture.DpiX, this.mainTexture.DpiY,PixelFormats.Bgra32,null);
 
             this.outPutStride = outPutTexture.BackBufferStride;
             this.outPutPixels = new byte[this.outPutStride * outPutTexture.PixelHeight];
@@ -48,9 +48,9 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
             int height = outPutTexture.PixelHeight;
             int width = outPutTexture.PixelWidth;
 
-            // wrap around if the offset exceedes the main image size to avoid out of bound error and sampling erronous data (if this was C or C++ anyway...)
-            //xOffset = xOffset >= mainTexture.PixelWidth ? xOffset % mainTexture.PixelWidth : xOffset;
-            //yOffset = yOffset >= mainTexture.PixelWidth ? yOffset % mainTexture.PixelWidth : yOffset;
+            // TODO TODO TODO TODO TOFUCKINGDO
+            // Check the texture sampling from the main texture, I think this is what is fucking up.
+
 
             for (int y = 0; y < height; y++)
             {
@@ -60,6 +60,8 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
                     float normY = (y - height / 2f) / (height / 2f);
 
                     float rSquared = normX * normX + normY * normY;
+
+                    int pixelIndex = y * outPutStride + x * 4;
 
                     if (rSquared <= 1f) // Only process inside the sphere
                     {
@@ -81,17 +83,27 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
                         int sampleX = (int)(u * mainTexture.PixelWidth) % mainTexture.PixelWidth;
                         int sampleY = (int)(v * mainTexture.PixelHeight) % mainTexture.PixelHeight;
 
-                        float value = MainPixels[sampleY * mainStride + sampleX] / 255f;
+                        int sampleIndex = sampleY * mainStride + sampleX * 4;
+                        float value0 = MainPixels[sampleIndex + 0] / 255f;
+                        float value1 = MainPixels[sampleIndex + 1] / 255f;
+                        float value2 = MainPixels[sampleIndex + 2] / 255f;
+                        float value3 = MainPixels[sampleIndex + 3] / 255f;
 
                         // Optional: circular falloff (smoothing)
                         float smoothing = Math.Clamp((MathF.Sqrt(rSquared) - 1f) / (0.98f - 1f), 0f, 1f);
 
-                        outPutPixels[y * outPutStride + x] = (byte)(value * 255f * smoothing);
+                        outPutPixels[pixelIndex + 0] = (byte)(value0 * 255f * smoothing);
+                        outPutPixels[pixelIndex + 1] = (byte)(value1 * 255f * smoothing);
+                        outPutPixels[pixelIndex + 2] = (byte)(value2 * 255f * smoothing);
+                        outPutPixels[pixelIndex + 3] = (byte)(value3 * 255f * smoothing);
                     }
                     else
                     {
                         // Outside the sphere: set to black or transparent
-                        outPutPixels[y * outPutStride + x] = 0;
+                        outPutPixels[pixelIndex + 0] = (byte)(0);
+                        outPutPixels[pixelIndex + 1] = (byte)(0);
+                        outPutPixels[pixelIndex + 2] = (byte)(0);
+                        outPutPixels[pixelIndex + 3] = (byte)(0);
                     }
                 }
             }

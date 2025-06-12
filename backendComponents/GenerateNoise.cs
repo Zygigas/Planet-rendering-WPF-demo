@@ -64,7 +64,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
         )
         {
             // we use 96 as DPI cause I think that's the best most used value? since the image is black and white texture, we can just use gray8 (I don't think we need more shades of gray then what gray8 can provide and migrating it to a colored image later would be easier as well)
-            WriteableBitmap outPutTexture = new(width, height, 96, 96, PixelFormats.Gray8, null);
+            WriteableBitmap outPutTexture = new(width, height, 96, 96, PixelFormats.Bgra32, null);
 
             int stride = outPutTexture.BackBufferStride;
             byte[] pixels = new byte[height * stride];
@@ -85,7 +85,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
 
                     // torus transform - Mirroring artifacts and warping
                     float xNorm = (float)x / width;
-                    float yNorm = ((float)y / height)* (avoidWarpEnd-avoidWarpStart) + avoidWarpStart;
+                    float yNorm = ((float)y / height) * (avoidWarpEnd-avoidWarpStart) + avoidWarpStart;
 
                     
                     float xAngle = xNorm  * 2 * MathF.PI ;
@@ -104,9 +104,12 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
                     float noiseValue = noiseSpace.GetNoise(nx,ny,nz);
                     //normalize to 0 to 1, since noise default is -1 to 1, but bitmaps don't like negatives AFAIK
                     noiseValue = (noiseValue + 1f) / 2f;
-                    int pixelIndex = y * stride + x;
+                    int pixelIndex = y * stride + x * 4;
                     // since noise is a float between 0 and 1, we can use it as precentage of max value (pure white)
-                    pixels[pixelIndex] = (byte)(noiseValue * byte.MaxValue);
+                    pixels[pixelIndex + 0] = (byte)(noiseValue * byte.MaxValue);
+                    pixels[pixelIndex + 1] = (byte)(noiseValue * byte.MaxValue);
+                    pixels[pixelIndex + 2] = (byte)(noiseValue * byte.MaxValue);
+                    pixels[pixelIndex + 3] = (byte)(byte.MaxValue);
                 }
             }
 

@@ -28,6 +28,8 @@ namespace Start_Withouth_numbers_simulation_project
         float scroll = 0f;
         float scrollFactor = 0.001f;
 
+        Timer timer = new Timer();
+
         //GenerateTexture planetTest = new();
 
         Planet planetTest;
@@ -36,12 +38,9 @@ namespace Start_Withouth_numbers_simulation_project
         {
             MouseDown += MouseDownEventHandler;
 
-
-            Timer timer = new Timer();
-
-            timer.Interval = 16;
+            timer.Interval = 32;
             timer.Elapsed += TimerTick;
-            timer.Start();
+            
             timer.AutoReset = true;
 
             InitializeComponent();
@@ -54,6 +53,7 @@ namespace Start_Withouth_numbers_simulation_project
             ///////////////////////////////////////////////
 
             GenerateNoise.NoiseOptions options = new();
+            options.seed = 1;
 
             FastNoiseLite noiseSpace = GenerateNoise.GenerateNoiseSpace(options);
             WriteableBitmap noiseTexture = GenerateNoise.GenerateNoiseTexture(500 * 2, 500, noiseSpace);
@@ -63,10 +63,17 @@ namespace Start_Withouth_numbers_simulation_project
             texture.Source = planetTest.outPutTexture;
             planetTest.Regenerate(scroll);
 
+            /// TODO: last time you were here you did seamless noise + UV wraps
+            /// now: you should convert both the image generation and planet generation to RGB32 so it's easier to work with once we do add colors.
+            /// or maybe do a converter? idk if it worth keeping the gray8 implementation for noise... it makes sense but maybe it's not worth the hassle.
+            /// 
+            /// after that: you should most likely start working on fleshing out the actual planet gen, make some more textures, generate biomes, generate cloud layer, and whatever else you figure out to make it more planet like, features... there is a bunch of documentation on the topic, just browse around.
+
         }
 
         private void MouseDownEventHandler(object sender, MouseButtonEventArgs e)
         {
+            timer.Start();
             scrollFactor += scrollFactor;
         }
 

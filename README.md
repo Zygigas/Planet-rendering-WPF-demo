@@ -4,7 +4,7 @@ A research project implementing a mathematical pipeline to map 2D procedural noi
 
 # Demo
 
-![Project Demo](Demo.mp4)
+https://github.com/user-attachments/assets/ee1ab794-b316-4393-be72-45d6029f17c3
 
 ## Technical Objective
 The goal of this project was to implement a spherical UV mapping algorithm to transform flat, fractal noise into a wrapped texture suitable for a planetary sphere. After this there were plans to expand this into full planet visualization and generation pipeline, but only the intial renderer was created as a proof of concept after measuring performance.

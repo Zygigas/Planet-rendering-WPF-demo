@@ -9,8 +9,7 @@ using System.Windows.Shapes;
 
 namespace Start_Withouth_numbers_simulation_project.backendComponents
 {
-    // TODO: probably best to rename this class to something more illustrative of it's purpose, or seperate it into multiple modules if it grows too big.
-    // for now just a convinient bin for a bunch of difrent utilities like saving and what not.
+    // TODO: Refactor into specialized utility services as the codebase expands to maintain modularity.
     internal static class Utilities
     {
         /// <summary>

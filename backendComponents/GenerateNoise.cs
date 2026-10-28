@@ -37,7 +37,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
         /// <returns></returns>
         public static FastNoiseLite GenerateNoiseSpace(NoiseOptions options)
         {
-            // also, FYI just learned that fastNoise does not support more then 3 dimmensions of noise... this is why we will need DI.
+            // Fast noise does not support more then 3 dimensional noise, for better smoothing, we should implement proper DI and replace fastnoise with a difrent library.
             FastNoiseLite noise = new();
             noise.SetSeed(options.seed);
             noise.SetNoiseType(options.noiseType);
@@ -63,27 +63,26 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
             FastNoiseLite noiseSpace
         )
         {
-            // we use 96 as DPI cause I think that's the best most used value? since the image is black and white texture, we can just use gray8 (I don't think we need more shades of gray then what gray8 can provide and migrating it to a colored image later would be easier as well)
             WriteableBitmap outPutTexture = new(width, height, 96, 96, PixelFormats.Bgra32, null);
 
             int stride = outPutTexture.BackBufferStride;
             byte[] pixels = new byte[height * stride];
 
 
-            //holy... finally found a solution that works nice
-            //TODO: Might want to clean up the code a bit.
+            //TODO: Thic code might requier cleanup
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    // TODO: once wrapping effect is complete, could be removed if it looks better on a wrap, since the 3d map would be distorted in a similiar way so the "bad" texture might be good for a more realistc effect.
-                    // offsets the sampling of the torus in the Y direction to avoid the warping area (thankfully it dosn't have to be seamless in Y direction)
+                    // Current solution produces wrapping near the poles, which is not a proper mapping in technical terms, but might look better visually
+                    // TODO: experiment with the warping to find a satisfactory balance
                     const float avoidWarpStart = 0.3f; 
                     const float avoidWarpEnd = 0.7f;
 
                     const float noiseScale = 2f; // noiseScale of the 3D circle - scales frequency
 
                     // torus transform - Mirroring artifacts and warping
+                    // we use this method due to currently relying on 3d noise instead of 4d noise, which would be easier
                     float xNorm = (float)x / width;
                     float yNorm = ((float)y / height) * (avoidWarpEnd-avoidWarpStart) + avoidWarpStart;
 
@@ -93,16 +92,13 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
 
                     float ySin = MathF.Sin(yNorm+MathF.PI);
 
-                    //float nx = noiseScale * MathF.Cos(xAngle);
-                    //float ny = noiseScale * MathF.Cos(xAngle);
-                    //float nz = noiseScale * MathF.Sin(yAngle);
-
                     float nx = noiseScale * MathF.Sin(xAngle)*ySin;
                     float ny = noiseScale * MathF.Cos(xAngle) * ySin;
                     float nz = noiseScale * MathF.Cos(yAngle);
 
                     float noiseValue = noiseSpace.GetNoise(nx,ny,nz);
-                    //normalize to 0 to 1, since noise default is -1 to 1, but bitmaps don't like negatives AFAIK
+
+                    //normalize the noise values from -1 to 1 range into bitmap 0 to 1 range
                     noiseValue = (noiseValue + 1f) / 2f;
                     int pixelIndex = y * stride + x * 4;
                     // since noise is a float between 0 and 1, we can use it as precentage of max value (pure white)

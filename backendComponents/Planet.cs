@@ -15,10 +15,10 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
         WriteableBitmap mainTexture;
         public WriteableBitmap outPutTexture;
 
-        int outPutStride; //outPutTexture.BackBufferStride
-        int mainStride; // mainTexture.BackBufferStride
-        byte[] outPutPixels; // [height * outPutStride];
-        byte[] MainPixels; // pixel array representation of the mainTexture.
+        int outPutStride; 
+        int mainStride; 
+        byte[] outPutPixels; 
+        byte[] MainPixels; 
 
         /// <summary>
         /// Makes a new planet, based off of the provided main texture.
@@ -48,8 +48,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
             int height = outPutTexture.PixelHeight;
             int width = outPutTexture.PixelWidth;
 
-            // TODO TODO TODO TODO TOFUCKINGDO
-            // Check the texture sampling from the main texture, I think this is what is fucking up.
+            // TODO: Check the texture sampling from the main texture and make sure it is not causing any issues.
 
 
             for (int y = 0; y < height; y++)
@@ -66,17 +65,16 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
                     if (rSquared <= 1f) // Only process inside the sphere
                     {
                         // Map the 2D screen point to a 3D point on the hemisphere
-                        float dz = MathF.Sqrt(1f - rSquared); // z up
+                        float dz = MathF.Sqrt(1f - rSquared); 
                         float dx = normX;
                         float dy = normY;
 
-                        // Now go from 3D vector (dx, dy, dz) → spherical UV
                         float u = 0.5f + MathF.Atan2(dz, -dx) / (2f * MathF.PI);
                         float v = 0.5f + MathF.Asin(dy) / MathF.PI;
 
                         u = scrollFactor - 0.25f + (u - 0.5f); // shift so that sphere center is at viewportCenterU
 
-                        // Wrap around to keep it inside 0–1
+                        // Normalize range
                         u = (u % 1f + 1f) % 1f;
 
                         // Convert UV to pixel coordinates
@@ -89,7 +87,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
                         float value2 = MainPixels[sampleIndex + 2] / 255f;
                         float value3 = MainPixels[sampleIndex + 3] / 255f;
 
-                        // Optional: circular falloff (smoothing)
+                        // Smoothing factor
                         float smoothing = Math.Clamp((MathF.Sqrt(rSquared) - 1f) / (0.98f - 1f), 0f, 1f);
 
                         outPutPixels[pixelIndex + 0] = (byte)(value0 * 255f * smoothing);
@@ -99,7 +97,7 @@ namespace Start_Withouth_numbers_simulation_project.backendComponents
                     }
                     else
                     {
-                        // Outside the sphere: set to black or transparent
+                        // Outside the sphere: set to transparent
                         outPutPixels[pixelIndex + 0] = (byte)(0);
                         outPutPixels[pixelIndex + 1] = (byte)(0);
                         outPutPixels[pixelIndex + 2] = (byte)(0);
